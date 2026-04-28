@@ -1,0 +1,68 @@
+{
+  "artworks": [
+    {
+      "id": "001",
+      "title": "Misty Mountains",
+      "category": "watercolor",
+      "image": "https://images.unsplash.com/photo-1578926314433-8471f1b2dfc5?w=600&h=600&fit=crop",
+      "description": "A serene landscape exploring layers of mist and color",
+      "year": 2025
+    },
+    {
+      "id": "002",
+      "title": "Urban Reflections",
+      "category": "acrylic",
+      "image": "https://images.unsplash.com/photo-1578926314433-8471f1b2dfc5?w=600&h=600&fit=crop",
+      "description": "Modern cityscape with emphasis on reflective surfaces",
+      "year": 2025
+    },
+    {
+      "id": "003",
+      "title": "Geometric Study",
+      "category": "sketches",
+      "image": "https://images.unsplash.com/photo-1578926314433-8471f1b2dfc5?w=600&h=600&fit=crop",
+      "description": "Exploration of form and spatial relationships",
+      "year": 2024
+    },
+    {
+      "id": "004",
+      "title": "Color Harmony",
+      "category": "acrylic",
+      "image": "https://images.unsplash.com/photo-1577720643272-265e434e0b3a?w=600&h=600&fit=crop",
+      "description": "An abstract study in complementary color theory",
+      "year": 2025
+    },
+    {
+      "id": "005",
+      "title": "Botanical Series I",
+      "category": "watercolor",
+      "image": "https://images.unsplash.com/photo-1578926314433-8471f1b2dfc5?w=600&h=600&fit=crop",
+      "description": "Detailed botanical illustration in delicate watercolors",
+      "year": 2024
+    },
+    {
+      "id": "006",
+      "title": "Experimental Process",
+      "category": "experiments",
+      "image": "https://images.unsplash.com/photo-1577720643272-265e434e0b3a?w=600&h=600&fit=crop",
+      "description": "Exploring new techniques and mixed media approaches",
+      "year": 2025
+    },
+    {
+      "id": "007",
+      "title": "Portrait Study",
+      "category": "sketches",
+      "image": "https://images.unsplash.com/photo-1578926314433-8471f1b2dfc5?w=600&h=600&fit=crop",
+      "description": "Charcoal and graphite portrait study",
+      "year": 2024
+    },
+    {
+      "id": "008",
+      "title": "Serenity",
+      "category": "watercolor",
+      "image": "https://images.unsplash.com/photo-1577720643272-265e434e0b3a?w=600&h=600&fit=crop",
+      "description": "Tranquil landscape with emphasis on atmospheric perspective",
+      "year": 2025
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kamilart portfolio showcasing oil, watercolor, and pastel artworks.">
+    <title>Kamilart | Oil, Watercolor, Pastel Art</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#gallery" class="nav-link">Gallery</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Gallery Section -->
+    <section id="gallery" class="gallery-section">
+        <div class="container">
+            <h2 class="gallery-title">Works</h2>
+            
+            <!-- Category Filters -->
+            <div class="filter-container">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="oil">Oil</button>
+                <button class="filter-btn" data-filter="pastel">Pastel</button>
+                <button class="filter-btn" data-filter="sketches">Sketches</button>
+                <button class="filter-btn" data-filter="experiments">Experiments</button>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div class="gallery-grid" id="galleryGrid">
+                <!-- Gallery items dynamically generated from artworks data -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-photo-container">
+                    <img src="bio/The Paintress.JPG" alt="Kamila the artist" class="hero-photo">
+                </div>
+                <div class="hero-logo-container">
+                    <img src="kamilart_logo1.png" alt="Kamilart logo" class="hero-logo">
+                </div>
+                <div class="hero-bio-container">
+                    <div class="hero-bio">
+                        <p class="hero-bio-text">
+                            Hello everyone, my name is Kamila.<br><br>
+                            I'm sharing my painting journey with you all - welcome.<br><br>
+                            I enjoy experimenting with different materials and techniques, while capturing the beauty of nature and the architecture that surrounds me.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <h2>About</h2>
+                <p>Each piece is a thoughtful exploration of color, form, and emotion. Working primarily in watercolor and pastel, I create artwork that invites contemplation and connection.</p>
+            </div>
+        </div>
+    </section>
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="closeLightbox">&times;</button>
+            <button class="lightbox-nav lightbox-prev" id="prevImage">&#10094;</button>
+            <div class="lightbox-image-container">
+                <img id="lightboxImage" src="" alt="" class="lightbox-image">
+            </div>
+            <button class="lightbox-nav lightbox-next" id="nextImage">&#10095;</button>
+            
+            <!-- Image Info -->
+            <div class="lightbox-info">
+                <h3 id="lightboxTitle"></h3>
+                <p id="lightboxCategory"></p>
+                <p id="lightboxDescription"></p>
+                <p id="lightboxYear"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 kamilart.com. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
