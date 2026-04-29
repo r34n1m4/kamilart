@@ -1,9 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import config from './admin.config.js';
 
-// Store real Supabase values in admin.config.js, which is ignored by git.
-// Use admin.config.example.js as a template and do not commit admin.config.js.
-const { SUPABASE_URL, SUPABASE_ANON_KEY } = config;
+// The admin panel loads Supabase public configuration from a server endpoint.
+// This allows Vercel environment variables to be mapped correctly at runtime.
+let supabase = null;
 const CATEGORY_OPTIONS = [
   'Acrylic',
   'Oil',
@@ -13,8 +12,6 @@ const CATEGORY_OPTIONS = [
   'Experiment',
   'Other',
 ];
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const refs = {
   loginScreen: document.getElementById('login-screen'),
@@ -36,11 +33,31 @@ const refs = {
 
 let currentArtwork = null;
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   attachListeners();
   populateCategoryOptions();
-  initializeAuth();
+
+  try {
+    await initializeSupabase();
+  } catch (error) {
+    showMessage(error.message || 'Unable to start admin panel.', true);
+  }
 });
+
+async function initializeSupabase() {
+  const config = await fetchSupabaseConfig();
+  supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+  await initializeAuth();
+}
+
+async function fetchSupabaseConfig() {
+  const response = await fetch('/api/config');
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || 'Unable to load Supabase configuration.');
+  }
+  return response.json();
+}
 
 function attachListeners() {
   refs.loginForm.addEventListener('submit', handleSignIn);
@@ -50,6 +67,11 @@ function attachListeners() {
 }
 
 async function initializeAuth() {
+  if (!supabase) {
+    showMessage('Supabase is not initialized.', true);
+    return;
+  }
+
   const { data } = await supabase.auth.getSession();
 
   if (data?.session?.user) {
