@@ -5,6 +5,9 @@ admin.config.js
 .env
 .env.*
 
+# Ignore temp folder
+temp/
+
 # Optional development files
 node_modules/
 .DS_Store

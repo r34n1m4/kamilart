@@ -3,15 +3,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // The admin panel loads Supabase public configuration from a server endpoint.
 // This allows Vercel environment variables to be mapped correctly at runtime.
 let supabase = null;
-const CATEGORY_OPTIONS = [
-  'Acrylic',
-  'Oil',
-  'Watercolor',
-  'Pastel',
-  'Sketch',
-  'Experiment',
-  'Other',
-];
+let materialTypes = [];
 
 const refs = {
   loginScreen: document.getElementById('login-screen'),
@@ -35,7 +27,6 @@ let currentArtwork = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
   attachListeners();
-  populateCategoryOptions();
 
   try {
     await initializeSupabase();
@@ -47,6 +38,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function initializeSupabase() {
   const config = await fetchSupabaseConfig();
   supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+  await loadMaterialTypes();
   await initializeAuth();
 }
 
@@ -92,10 +84,12 @@ async function initializeAuth() {
 }
 
 function populateCategoryOptions() {
-  CATEGORY_OPTIONS.forEach((category) => {
+  refs.categorySelect.innerHTML = '<option value="">Select material</option>';
+
+  materialTypes.forEach((type) => {
     const option = document.createElement('option');
-    option.value = category;
-    option.textContent = category;
+    option.value = type.id;
+    option.textContent = type.name;
     refs.categorySelect.appendChild(option);
   });
 }
@@ -140,12 +134,28 @@ async function handleSignOut() {
   showMessage('Signed out successfully.');
 }
 
+async function loadMaterialTypes() {
+  const { data, error } = await supabase
+    .from('material_types')
+    .select('id, name, slug')
+    .order('name', { ascending: true });
+
+  if (error) {
+    showMessage(error.message || 'Unable to load material types.', true);
+    materialTypes = [];
+  } else {
+    materialTypes = data || [];
+  }
+
+  populateCategoryOptions();
+}
+
 async function loadArtworks() {
   refs.artworkList.innerHTML = '<p>Loading artworks…</p>';
 
-  const { data, error } = await supabase
+  const { data: artworks, error } = await supabase
     .from('artworks')
-    .select('id, title, description, category, image_url, created_at')
+    .select('id, title, description, material_type_id, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -154,7 +164,42 @@ async function loadArtworks() {
     return;
   }
 
-  renderArtworkList(data || []);
+  const rows = artworks || [];
+  const artworkIds = rows.map((artwork) => artwork.id);
+
+  const imageMap = new Map();
+  if (artworkIds.length > 0) {
+    const { data: images, error: imagesError } = await supabase
+      .from('artwork_images')
+      .select('artwork_id, url, is_main, sort_order')
+      .in('artwork_id', artworkIds)
+      .order('sort_order', { ascending: true });
+
+    if (imagesError) {
+      showMessage(imagesError.message || 'Unable to load artwork images.', true);
+    } else {
+      images.forEach((image) => {
+        if (image.is_main && !imageMap.has(image.artwork_id)) {
+          imageMap.set(image.artwork_id, image.url);
+        } else if (!imageMap.has(image.artwork_id)) {
+          imageMap.set(image.artwork_id, image.url);
+        }
+      });
+    }
+  }
+
+  const materialTypeNameById = new Map(
+    materialTypes.map((type) => [type.id, type.name]),
+  );
+
+  const artworkData = rows.map((artwork) => ({
+    ...artwork,
+    image_url: imageMap.get(artwork.id) || '',
+    category: materialTypeNameById.get(artwork.material_type_id) || '',
+    material_type_id: artwork.material_type_id,
+  }));
+
+  renderArtworkList(artworkData);
 }
 
 function renderArtworkList(artworks) {
@@ -216,7 +261,7 @@ function loadArtworkIntoForm(artwork) {
   refs.cancelEditButton.classList.remove('hidden');
   refs.titleInput.value = artwork.title || '';
   refs.descriptionInput.value = artwork.description || '';
-  refs.categorySelect.value = artwork.category || '';
+  refs.categorySelect.value = artwork.material_type_id || '';
   refs.imageInput.value = '';
 }
 
@@ -225,11 +270,11 @@ async function handleArtworkSubmit(event) {
 
   const title = refs.titleInput.value.trim();
   const description = refs.descriptionInput.value.trim();
-  const category = refs.categorySelect.value;
+  const materialTypeId = refs.categorySelect.value;
   const imageFile = refs.imageInput.files[0];
 
-  if (!title || !description || !category) {
-    showMessage('Title, description, and category are required.', true);
+  if (!title || !description || !materialTypeId) {
+    showMessage('Title, description, and material type are required.', true);
     return;
   }
 
@@ -248,10 +293,20 @@ async function handleArtworkSubmit(event) {
     imageUrl = uploadedUrl;
   }
 
+  const payload = {
+    title,
+    description,
+    material_type_id: materialTypeId,
+    slug: slugify(title),
+    is_published: true,
+    created_at: new Date().toISOString().slice(0, 10),
+    created_at_timestamp: new Date().toISOString(),
+  };
+
   if (currentArtwork) {
-    await updateArtwork(currentArtwork.id, { title, description, category, image_url: imageUrl });
+    await updateArtwork(currentArtwork.id, payload, imageUrl);
   } else {
-    await createArtwork({ title, description, category, image_url: imageUrl });
+    await createArtwork(payload, imageUrl);
   }
 }
 
@@ -285,28 +340,121 @@ async function uploadArtworkImage(file) {
   return data.url;
 }
 
-async function createArtwork(payload) {
-  const { error } = await supabase.from('artworks').insert([payload]);
-
-  if (error) {
-    showMessage(error.message || 'Unable to save artwork.', true);
-  } else {
-    showMessage('Artwork added successfully.');
-    resetForm();
-    loadArtworks();
-  }
+function slugify(text) {
+  return text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
-async function updateArtwork(id, payload) {
+async function createArtwork(payload, imageUrl) {
+  const { data, error } = await supabase
+    .from('artworks')
+    .insert([payload])
+    .select('id')
+    .single();
+
+  if (error || !data?.id) {
+    showMessage(error?.message || 'Unable to save artwork.', true);
+    return;
+  }
+
+  const artworkId = data.id;
+  const imagePayload = {
+    artwork_id: artworkId,
+    url: imageUrl,
+    is_main: true,
+    sort_order: 1,
+  };
+
+  const materialPayload = {
+    artwork_id: artworkId,
+    material_type_id: payload.material_type_id,
+  };
+
+  const { error: imageError } = await supabase.from('artwork_images').insert([imagePayload]);
+  if (imageError) {
+    showMessage(imageError.message || 'Artwork saved, but image upload failed.', true);
+    return;
+  }
+
+  const { error: materialError } = await supabase.from('artwork_materials').insert([materialPayload]);
+  if (materialError) {
+    showMessage(materialError.message || 'Artwork saved, but material mapping failed.', true);
+    return;
+  }
+
+  showMessage('Artwork added successfully.');
+  resetForm();
+  loadArtworks();
+}
+
+async function updateArtwork(id, payload, imageUrl) {
   const { error } = await supabase.from('artworks').update(payload).eq('id', id);
 
   if (error) {
     showMessage(error.message || 'Unable to update artwork.', true);
-  } else {
-    showMessage('Artwork updated successfully.');
-    resetForm();
-    loadArtworks();
+    return;
   }
+
+  const { error: materialDeleteError } = await supabase.from('artwork_materials').delete().eq('artwork_id', id);
+  if (materialDeleteError) {
+    showMessage(materialDeleteError.message || 'Unable to update artwork materials.', true);
+    return;
+  }
+
+  const { error: materialInsertError } = await supabase.from('artwork_materials').insert([
+    {
+      artwork_id: id,
+      material_type_id: payload.material_type_id,
+    },
+  ]);
+  if (materialInsertError) {
+    showMessage(materialInsertError.message || 'Unable to save artwork material.', true);
+    return;
+  }
+
+  if (imageUrl) {
+    const { data: existingImage, error: fetchError } = await supabase
+      .from('artwork_images')
+      .select('id')
+      .eq('artwork_id', id)
+      .eq('is_main', true)
+      .limit(1)
+      .single();
+
+    if (!fetchError && existingImage?.id) {
+      const { error: imageError } = await supabase
+        .from('artwork_images')
+        .update({ url: imageUrl })
+        .eq('id', existingImage.id);
+      if (imageError) {
+        showMessage(imageError.message || 'Unable to update artwork image.', true);
+        return;
+      }
+    } else {
+      const { error: imageInsertError } = await supabase.from('artwork_images').insert([
+        {
+          artwork_id: id,
+          url: imageUrl,
+          is_main: true,
+          sort_order: 1,
+        },
+      ]);
+      if (imageInsertError) {
+        showMessage(imageInsertError.message || 'Unable to save artwork image.', true);
+        return;
+      }
+    }
+  }
+
+  showMessage('Artwork updated successfully.');
+  resetForm();
+  loadArtworks();
 }
 
 function confirmDeleteArtwork(artwork) {
@@ -319,8 +467,19 @@ function confirmDeleteArtwork(artwork) {
 }
 
 async function deleteArtwork(id) {
-  const { error } = await supabase.from('artworks').delete().eq('id', id);
+  const { error: imageError } = await supabase.from('artwork_images').delete().eq('artwork_id', id);
+  if (imageError) {
+    showMessage(imageError.message || 'Unable to delete artwork images.', true);
+    return;
+  }
 
+  const { error: materialError } = await supabase.from('artwork_materials').delete().eq('artwork_id', id);
+  if (materialError) {
+    showMessage(materialError.message || 'Unable to delete artwork material mapping.', true);
+    return;
+  }
+
+  const { error } = await supabase.from('artworks').delete().eq('id', id);
   if (error) {
     showMessage(error.message || 'Unable to delete artwork.', true);
     return;
