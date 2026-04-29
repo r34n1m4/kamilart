@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel | KamilArt</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div>
+        <h1>Art Gallery Admin</h1>
+        <p class="subtitle">Manage artworks separately from the public gallery.</p>
+      </div>
+      <button id="sign-out-button" class="secondary-button hidden">Sign out</button>
+    </header>
+
+    <main>
+      <section id="login-screen" class="card">
+        <h2>Admin Login</h2>
+        <form id="login-form" class="form-grid">
+          <label>
+            Email
+            <input type="email" id="login-email" placeholder="admin@example.com" required />
+          </label>
+          <label>
+            Password
+            <input type="password" id="login-password" placeholder="••••••••" required minlength="8" />
+          </label>
+          <button type="submit" class="primary-button">Sign in</button>
+        </form>
+      </section>
+
+      <section id="admin-screen" class="hidden">
+        <div class="grid-two-col">
+          <div class="card">
+            <div class="section-header">
+              <h2 id="form-title">Add artwork</h2>
+              <button id="cancel-edit-button" class="text-button hidden">Cancel edit</button>
+            </div>
+            <form id="artwork-form" class="form-grid">
+              <label>
+                Title
+                <input type="text" id="artwork-title" required />
+              </label>
+              <label>
+                Category
+                <select id="artwork-category" required>
+                  <option value="">Select category</option>
+                </select>
+              </label>
+              <label>
+                Description
+                <textarea id="artwork-description" rows="4" required></textarea>
+              </label>
+              <label>
+                Image
+                <input type="file" id="artwork-image" accept="image/*" />
+              </label>
+              <p class="hint">Choose a new image only when adding or replacing artwork.</p>
+              <button type="submit" class="primary-button">Save artwork</button>
+            </form>
+          </div>
+
+          <div class="card" id="artwork-list-card">
+            <div class="section-header">
+              <h2>Artwork list</h2>
+            </div>
+            <div id="artwork-list" class="artwork-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="status-message" class="toast hidden"></div>
+    </main>
+  </div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

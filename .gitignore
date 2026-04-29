@@ -1,0 +1,12 @@
+# Ignore local admin Supabase configuration
+admin.config.js
+
+# Ignore local environment files
+.env
+.env.*
+
+# Optional development files
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
