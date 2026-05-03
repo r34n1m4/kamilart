@@ -289,6 +289,7 @@ function loadArtworkIntoForm(artwork) {
 
 async function handleArtworkSubmit(event) {
   event.preventDefault();
+  console.log('UPLOAD_START');
 
   const title = refs.titleInput.value.trim();
   const description = refs.descriptionInput.value.trim();
@@ -333,32 +334,55 @@ async function handleArtworkSubmit(event) {
 
 async function uploadArtworkImage(file) {
   const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-  const base64 = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  console.log('UPLOAD_START', { fileName, fileType: file.type, fileSize: file.size });
 
-  const response = await fetch('/api/upload', {
+  const signPayload = {
+    fileName,
+    fileType: file.type,
+    fileSize: file.size,
+  };
+
+  console.log('REQUEST_SIGNED_URL', signPayload);
+  const signResponse = await fetch('/api/sign-upload', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      fileName,
-      fileType: file.type,
-      fileData: base64,
-    }),
+    body: JSON.stringify(signPayload),
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    showMessage(data.error || 'Upload failed.', true);
+  const signData = await signResponse.json();
+  if (!signResponse.ok) {
+    console.error('UPLOAD_FAILED_STAGE: REQUEST_SIGNED_URL', signData);
+    showMessage(signData.error || 'Unable to get upload URL.', true);
     return null;
   }
 
-  return data.url;
+  const { uploadUrl, publicUrl, key } = signData;
+  console.log('REQUEST_SIGNED_URL_SUCCESS', { key, publicUrl });
+
+  console.log('UPLOAD_TO_R2_START', { key, uploadUrl });
+  const uploadResponse = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    const responseText = await uploadResponse.text().catch(() => 'Unable to read response');
+    console.error('UPLOAD_FAILED_STAGE: UPLOAD_TO_R2', {
+      status: uploadResponse.status,
+      statusText: uploadResponse.statusText,
+      responseText,
+    });
+    showMessage('Upload failed while sending file to storage.', true);
+    return null;
+  }
+
+  console.log('UPLOAD_TO_R2_SUCCESS', { key, publicUrl });
+  return publicUrl;
 }
 
 function slugify(text) {
@@ -397,11 +421,13 @@ async function createArtwork(payload, imageUrl, materialTypeId) {
     material_type_id: materialTypeId,
   };
 
+  console.log('SUPABASE_INSERT_START', { artworkId, url: imageUrl });
   const { error: imageError } = await supabase.from('artwork_images').insert([imagePayload]);
   if (imageError) {
     showMessage(imageError.message || 'Artwork saved, but image upload failed.', true);
     return;
   }
+  console.log('SUPABASE_INSERT_SUCCESS', { artworkId, url: imageUrl });
 
   const { error: materialError } = await supabase.from('artwork_materials').insert([materialPayload]);
   if (materialError) {
@@ -449,6 +475,7 @@ async function updateArtwork(id, payload, imageUrl, materialTypeId) {
       .single();
 
     if (!fetchError && existingImage?.id) {
+      console.log('SUPABASE_INSERT_START', { artworkId: id, url: imageUrl, update: true });
       const { error: imageError } = await supabase
         .from('artwork_images')
         .update({ url: imageUrl })
@@ -457,7 +484,9 @@ async function updateArtwork(id, payload, imageUrl, materialTypeId) {
         showMessage(imageError.message || 'Unable to update artwork image.', true);
         return;
       }
+      console.log('SUPABASE_INSERT_SUCCESS', { artworkId: id, url: imageUrl, update: true });
     } else {
+      console.log('SUPABASE_INSERT_START', { artworkId: id, url: imageUrl, insert: true });
       const { error: imageInsertError } = await supabase.from('artwork_images').insert([
         {
           artwork_id: id,
@@ -470,6 +499,7 @@ async function updateArtwork(id, payload, imageUrl, materialTypeId) {
         showMessage(imageInsertError.message || 'Unable to save artwork image.', true);
         return;
       }
+      console.log('SUPABASE_INSERT_SUCCESS', { artworkId: id, url: imageUrl, insert: true });
     }
   }
 
