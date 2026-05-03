@@ -187,7 +187,7 @@ const GalleryUI = {
         
         if (!galleryGrid) return;
 
-        if (artworks.length === 0) {
+        if (!artworks || artworks.length === 0) {
             galleryGrid.innerHTML = '<div class="empty-state"><p>No artworks found.</p></div>';
             return;
         }
@@ -209,9 +209,11 @@ const GalleryUI = {
      * @returns {string} HTML string
      */
     createGalleryItem(artwork) {
+        const imageUrl = artwork.image || 'https://via.placeholder.com/400?text=No+Image';
+
         return `
             <div class="gallery-item" data-id="${artwork.id}" data-category="${artwork.category}">
-                <img src="${artwork.image}" alt="${artwork.title}" loading="lazy">
+                <img src="${imageUrl}" alt="${artwork.title}" loading="lazy">
                 <div class="gallery-item-overlay">
                     <div class="gallery-item-info">
                         <div class="gallery-item-title">${this.escapeHtml(artwork.title)}</div>

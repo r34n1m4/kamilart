@@ -31,6 +31,12 @@ export default async function handler(req, res) {
 
     // Fetch all images for these artworks
     const artworkIds = artworks.map(a => a.id);
+
+    if (artworkIds.length === 0) {
+      res.status(200).json([]);
+      return;
+    }
+
     const { data: images, error: imagesError } = await supabase
       .from('artwork_images')
       .select('id, artwork_id, url, is_main, sort_order')
