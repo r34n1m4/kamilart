@@ -6,121 +6,84 @@
 
 /* ====================================
    1. DATA LAYER
-   This section is separate from UI to allow
-   future migration to API endpoints
+   Fetches artworks from Supabase via API
+   Uses caching to minimize API calls
    ==================================== */
 
 const ArtworkData = {
-    // Data source - easily replaceable with API call
-    artworks: [
-        {
-            id: '001',
-            title: 'Morning Boat',
-            category: 'oil',
-            image: 'art/Oil/Morning Boat.JPG',
-            description: 'A serene morning scene with a boat on calm waters',
-            year: 2025
-        },
-        {
-            id: '002',
-            title: 'The Mountain',
-            category: 'oil',
-            image: 'art/Oil/The Mountain.JPG',
-            description: 'Majestic mountain landscape in oil',
-            year: 2025
-        },
-        {
-            id: '003',
-            title: 'Fat Bird',
-            category: 'pastel',
-            image: 'art/Pastel/Fat Bird.JPG',
-            description: 'A charming pastel portrait of a plump bird',
-            year: 2025
-        },
-        {
-            id: '004',
-            title: 'Lavanda',
-            category: 'pastel',
-            image: 'art/Pastel/Lavanda.JPG',
-            description: 'Beautiful lavender fields captured in pastel',
-            year: 2025
-        },
-        {
-            id: '005',
-            title: 'Sunflowers',
-            category: 'pastel',
-            image: 'art/Pastel/Sunflowers.JPG',
-            description: 'Vibrant sunflowers in delicate pastel tones',
-            year: 2025
-        },
-        {
-            id: '006',
-            title: 'Rome Square',
-            category: 'sketches',
-            image: 'art/Scetches/Rome Square.JPG',
-            description: 'Architectural sketch of a historic Roman square',
-            year: 2024
-        },
-        {
-            id: '007',
-            title: 'Vatican',
-            category: 'sketches',
-            image: 'art/Scetches/Vatican.JPG',
-            description: 'Detailed sketch of Vatican architecture',
-            year: 2024
-        },
-        {
-            id: '008',
-            title: 'Before Sunrise',
-            category: 'experiments',
-            image: 'art/Experiments/Before Sunrise.JPG',
-            description: 'Soft early-morning atmosphere captured in an experimental study',
-            year: 2025
-        }
-    ],
+    // Cache for artworks fetched from API
+    artworks: [],
+    isLoaded: false,
 
     /**
-     * Fetches all artworks
-     * FUTURE: Replace with API call like: fetch('/api/artworks')
+     * Fetches all published artworks from Supabase via API
      * @returns {Promise<Array>} Array of artwork objects
      */
     async getAll() {
-        return Promise.resolve(this.artworks);
+        if (!this.isLoaded) {
+            await this.fetchFromAPI();
+        }
+        return this.artworks;
     },
 
     /**
-     * Fetches artworks by category
-     * FUTURE: Replace with API call like: fetch(`/api/artworks?category=${category}`)
-     * @param {string} category - Category filter
+     * Fetches artworks by category from cached data
+     * @param {string} category - Category filter (e.g., 'oil', 'pastel')
      * @returns {Promise<Array>} Filtered array of artworks
      */
     async getByCategory(category) {
+        const allArtworks = await this.getAll();
+        
         if (category === 'all') {
-            return this.getAll();
+            return allArtworks;
         }
-        return Promise.resolve(
-            this.artworks.filter(artwork => artwork.category === category)
-        );
+        
+        return allArtworks.filter(artwork => artwork.category === category);
     },
 
     /**
-     * Gets all unique categories
-     * FUTURE: Could come from API metadata endpoint
-     * @returns {Array<string>} Array of unique categories
+     * Gets all unique categories from cached data
+     * @returns {Promise<Array<string>>} Array of unique categories sorted
      */
-    getCategories() {
-        const categories = new Set(this.artworks.map(a => a.category));
+    async getCategories() {
+        const allArtworks = await this.getAll();
+        const categories = new Set(allArtworks.map(a => a.category));
         return Array.from(categories).sort();
     },
 
     /**
-     * Finds artwork by ID
-     * FUTURE: Replace with API call like: fetch(`/api/artworks/${id}`)
+     * Finds artwork by ID in cached data
      * @param {string} id - Artwork ID
-     * @returns {Object|null} Artwork object or null
+     * @returns {Promise<Object|null>} Artwork object or null
      */
-    getById(id) {
-        return this.artworks.find(artwork => artwork.id === id) || null;
+    async getById(id) {
+        const allArtworks = await this.getAll();
+        return allArtworks.find(artwork => artwork.id === id) || null;
+    },
+
+    /**
+     * Fetches artworks from Supabase API endpoint
+     * @private
+     */
+    async fetchFromAPI() {
+        try {
+            const response = await fetch('/api/artworks');
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to fetch artworks');
+            }
+            
+            this.artworks = await response.json();
+            this.isLoaded = true;
+            
+            console.log(`Loaded ${this.artworks.length} artworks from Supabase`);
+        } catch (error) {
+            console.error('Error fetching artworks from API:', error);
+            // Fallback to empty array to prevent UI breakage
+            this.artworks = [];
+            this.isLoaded = true;
+        }
     }
 };
 
