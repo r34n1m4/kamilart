@@ -50,15 +50,22 @@ export default async function handler(req, res) {
     }
 
     // Fetch all materials for these artworks (joined with material_types)
-    const { data: materials, error: materialsError } = await supabase
-      .from('artwork_materials')
-      .select('artwork_id, material_types(id, name, slug)')
-      .in('artwork_id', artworkIds);
+    let materials = [];
+    try {
+      const { data: materialsData, error: materialsError } = await supabase
+        .from('artwork_materials')
+        .select('artwork_id, material_types(id, name, slug)')
+        .in('artwork_id', artworkIds);
 
-    if (materialsError) {
-      console.error('Error fetching materials:', materialsError);
-      res.status(500).json({ error: 'Failed to fetch materials' });
-      return;
+      if (materialsError) {
+        console.error('Error fetching materials:', materialsError);
+        // Continue without materials
+      } else {
+        materials = materialsData || [];
+      }
+    } catch (error) {
+      console.error('Exception fetching materials:', error);
+      // Continue without materials
     }
 
     // Group images by artwork_id
