@@ -87,6 +87,91 @@ const ArtworkData = {
     }
 };
 
+const MaterialTypeData = {
+    types: [],
+    client: null,
+
+    async init() {
+        if (this.types.length > 0) return;
+
+        try {
+            const response = await fetch('/api/config');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Unable to load Supabase configuration.');
+            }
+
+            const config = await response.json();
+            if (!config?.SUPABASE_URL || !config?.SUPABASE_ANON_KEY) {
+                throw new Error('Invalid Supabase configuration.');
+            }
+
+            const createClient = await this.getCreateClient();
+            this.client = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+
+            const { data, error } = await this.client
+                .from('material_types')
+                .select('id, name, slug')
+                .order('name', { ascending: true });
+
+            if (error) {
+                console.error('Error loading material types:', error);
+                this.types = [];
+                return;
+            }
+
+            this.types = data || [];
+        } catch (error) {
+            console.error('Error initializing material types:', error);
+            this.types = [];
+        }
+    },
+
+    async getCreateClient() {
+        if (typeof window.createClient === 'function') {
+            return window.createClient;
+        }
+
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            return window.supabase.createClient.bind(window.supabase);
+        }
+
+        await this.loadLibrary();
+
+        if (typeof window.createClient === 'function') {
+            return window.createClient;
+        }
+
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            return window.supabase.createClient.bind(window.supabase);
+        }
+
+        throw new Error('Supabase client library unavailable.');
+    },
+
+    loadLibrary() {
+        return new Promise((resolve, reject) => {
+            if (typeof window.createClient === 'function' || (window.supabase && typeof window.supabase.createClient === 'function')) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Failed to load Supabase library.'));
+            document.head.appendChild(script);
+        });
+    },
+
+    getTabs() {
+        return this.types.map(type => ({
+            label: type.name,
+            value: type.slug,
+        }));
+    }
+};
+
 /* ====================================
    2. UI LAYER - Gallery Rendering
    Modular rendering functions
@@ -167,6 +252,9 @@ const Gallery = {
      */
     async init() {
         try {
+            await MaterialTypeData.init();
+            this.renderFilterTabs();
+            
             // Render initial gallery
             await this.applyFilter('all');
 
@@ -175,6 +263,23 @@ const Gallery = {
         } catch (error) {
             console.error('Error initializing gallery:', error);
         }
+    },
+
+    /**
+     * Renders the material type tabs for the gallery filter
+     */
+    renderFilterTabs() {
+        const container = document.querySelector('.filter-container');
+        if (!container) return;
+
+        const tabs = [{ label: 'All', value: 'all' }, ...MaterialTypeData.getTabs()];
+        container.innerHTML = tabs
+            .map(tab => `
+                <button class="filter-btn${tab.value === 'all' ? ' active' : ''}" data-filter="${tab.value}">
+                    ${GalleryUI.escapeHtml(tab.label)}
+                </button>
+            `)
+            .join('');
     },
 
     /**
