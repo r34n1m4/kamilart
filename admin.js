@@ -155,7 +155,7 @@ async function loadArtworks() {
 
   const { data: artworks, error } = await supabase
     .from('artworks')
-    .select('id, title, description, material_type_id, created_at')
+    .select('id, title, description, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -168,12 +168,20 @@ async function loadArtworks() {
   const artworkIds = rows.map((artwork) => artwork.id);
 
   const imageMap = new Map();
+  const materialMap = new Map();
+
   if (artworkIds.length > 0) {
-    const { data: images, error: imagesError } = await supabase
-      .from('artwork_images')
-      .select('artwork_id, url, is_main, sort_order')
-      .in('artwork_id', artworkIds)
-      .order('sort_order', { ascending: true });
+    const [{ data: images, error: imagesError }, { data: materials, error: materialsError }] = await Promise.all([
+      supabase
+        .from('artwork_images')
+        .select('artwork_id, url, is_main, sort_order')
+        .in('artwork_id', artworkIds)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('artwork_materials')
+        .select('artwork_id, material_type_id')
+        .in('artwork_id', artworkIds),
+    ]);
 
     if (imagesError) {
       showMessage(imagesError.message || 'Unable to load artwork images.', true);
@@ -186,18 +194,32 @@ async function loadArtworks() {
         }
       });
     }
+
+    if (materialsError) {
+      showMessage(materialsError.message || 'Unable to load artwork materials.', true);
+    } else {
+      materials.forEach((material) => {
+        const materialName = materialTypeNameById.get(material.material_type_id) || '';
+        if (!materialMap.has(material.artwork_id)) {
+          materialMap.set(material.artwork_id, material.material_type_id);
+        }
+      });
+    }
   }
 
   const materialTypeNameById = new Map(
     materialTypes.map((type) => [type.id, type.name]),
   );
 
-  const artworkData = rows.map((artwork) => ({
-    ...artwork,
-    image_url: imageMap.get(artwork.id) || '',
-    category: materialTypeNameById.get(artwork.material_type_id) || '',
-    material_type_id: artwork.material_type_id,
-  }));
+  const artworkData = rows.map((artwork) => {
+    const materialTypeId = materialMap.get(artwork.id) || '';
+    return {
+      ...artwork,
+      image_url: imageMap.get(artwork.id) || '',
+      category: materialTypeNameById.get(materialTypeId) || '',
+      material_type_id: materialTypeId,
+    };
+  });
 
   renderArtworkList(artworkData);
 }
@@ -296,7 +318,6 @@ async function handleArtworkSubmit(event) {
   const payload = {
     title,
     description,
-    material_type_id: materialTypeId,
     slug: slugify(title),
     is_published: true,
     created_at: new Date().toISOString().slice(0, 10),
@@ -304,9 +325,9 @@ async function handleArtworkSubmit(event) {
   };
 
   if (currentArtwork) {
-    await updateArtwork(currentArtwork.id, payload, imageUrl);
+    await updateArtwork(currentArtwork.id, payload, imageUrl, materialTypeId);
   } else {
-    await createArtwork(payload, imageUrl);
+    await createArtwork(payload, imageUrl, materialTypeId);
   }
 }
 
@@ -351,7 +372,7 @@ function slugify(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-async function createArtwork(payload, imageUrl) {
+async function createArtwork(payload, imageUrl, materialTypeId) {
   const { data, error } = await supabase
     .from('artworks')
     .insert([payload])
@@ -373,7 +394,7 @@ async function createArtwork(payload, imageUrl) {
 
   const materialPayload = {
     artwork_id: artworkId,
-    material_type_id: payload.material_type_id,
+    material_type_id: materialTypeId,
   };
 
   const { error: imageError } = await supabase.from('artwork_images').insert([imagePayload]);
@@ -393,7 +414,7 @@ async function createArtwork(payload, imageUrl) {
   loadArtworks();
 }
 
-async function updateArtwork(id, payload, imageUrl) {
+async function updateArtwork(id, payload, imageUrl, materialTypeId) {
   const { error } = await supabase.from('artworks').update(payload).eq('id', id);
 
   if (error) {
@@ -410,7 +431,7 @@ async function updateArtwork(id, payload, imageUrl) {
   const { error: materialInsertError } = await supabase.from('artwork_materials').insert([
     {
       artwork_id: id,
-      material_type_id: payload.material_type_id,
+      material_type_id: materialTypeId,
     },
   ]);
   if (materialInsertError) {
