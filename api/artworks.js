@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = process.env;
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error('Missing Supabase configuration');
       res.status(500).json({ error: 'Supabase configuration is missing.' });
       return;
     }
@@ -17,6 +18,7 @@ export default async function handler(req, res) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Fetch published artworks with their images and materials
+    console.log('[API] Fetching published artworks...');
     const { data: artworks, error: artworksError } = await supabase
       .from('artworks')
       .select('id, title, description, created_at, slug, created_at_timestamp')
@@ -24,18 +26,22 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false });
 
     if (artworksError) {
-      console.error('Error fetching artworks:', artworksError);
-      res.status(500).json({ error: 'Failed to fetch artworks' });
+      console.error('[API] Error fetching artworks:', artworksError);
+      res.status(500).json({ error: 'Failed to fetch artworks', details: artworksError.message });
+      return;
+    }
+
+    console.log(`[API] Found ${artworks?.length || 0} published artworks`);
+
+    if (!artworks || artworks.length === 0) {
+      console.log('[API] No artworks found, returning empty array');
+      res.status(200).json([]);
       return;
     }
 
     // Fetch all images for these artworks
     const artworkIds = artworks.map(a => a.id);
-
-    if (artworkIds.length === 0) {
-      res.status(200).json([]);
-      return;
-    }
+    console.log(`[API] Fetching images for ${artworkIds.length} artworks...`);
 
     const { data: images, error: imagesError } = await supabase
       .from('artwork_images')
@@ -44,12 +50,15 @@ export default async function handler(req, res) {
       .order('sort_order', { ascending: true });
 
     if (imagesError) {
-      console.error('Error fetching images:', imagesError);
-      res.status(500).json({ error: 'Failed to fetch images' });
+      console.error('[API] Error fetching images:', imagesError);
+      res.status(500).json({ error: 'Failed to fetch images', details: imagesError.message });
       return;
     }
 
+    console.log(`[API] Found ${images?.length || 0} images`);
+
     // Fetch all materials for these artworks (joined with material_types)
+    console.log('[API] Fetching materials...');
     let materials = [];
     try {
       const { data: materialsData, error: materialsError } = await supabase
@@ -58,19 +67,18 @@ export default async function handler(req, res) {
         .in('artwork_id', artworkIds);
 
       if (materialsError) {
-        console.error('Error fetching materials:', materialsError);
-        // Continue without materials
+        console.warn('[API] Warning fetching materials (continuing anyway):', materialsError);
       } else {
         materials = materialsData || [];
+        console.log(`[API] Found ${materials.length} material associations`);
       }
     } catch (error) {
-      console.error('Exception fetching materials:', error);
-      // Continue without materials
+      console.warn('[API] Exception fetching materials (continuing anyway):', error);
     }
 
     // Group images by artwork_id
     const imagesMap = {};
-    images.forEach(img => {
+    (images || []).forEach(img => {
       if (!imagesMap[img.artwork_id]) {
         imagesMap[img.artwork_id] = [];
       }
@@ -118,9 +126,10 @@ export default async function handler(req, res) {
       };
     });
 
+    console.log(`[API] Returning ${transformedArtworks.length} transformed artworks`);
     res.status(200).json(transformedArtworks);
   } catch (error) {
-    console.error('Error in artworks endpoint:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('[API] Unhandled error in artworks endpoint:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 }
