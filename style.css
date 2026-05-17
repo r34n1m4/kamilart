@@ -710,14 +710,16 @@ button {
 
 .lightbox-content {
     position: relative;
-    width: 90%;
-    max-width: 900px;
-    max-height: 90vh;
+    width: min(96vw, 900px);
+    max-height: 95vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow: auto;
     box-sizing: border-box;
+    padding: var(--spacing-md);
+    border-radius: 28px;
+    background: rgba(18, 14, 11, 0.96);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
     animation: zoomIn 0.3s ease-out;
 }
 
@@ -734,12 +736,17 @@ button {
 
 .lightbox-image-container {
     width: 100%;
-    max-height: calc(100vh - 240px);
-    min-height: 220px;
+    flex: 1 1 auto;
+    min-height: 240px;
+    max-height: calc(95vh - 260px);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
 }
 
 .lightbox-image {
