@@ -294,8 +294,8 @@ async function handleArtworkSubmit(event) {
   const materialTypeId = refs.categorySelect.value;
   const imageFile = refs.imageInput.files[0];
 
-  if (!title || !description || !materialTypeId) {
-    showMessage('Title, description, and material type are required.', true);
+  if (!title || !materialTypeId) {
+    showMessage('Title and material type are required.', true);
     return;
   }
 
