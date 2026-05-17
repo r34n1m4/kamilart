@@ -145,6 +145,10 @@ button {
     border: 0;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .nav-menu {
     list-style: none;
     display: flex;
