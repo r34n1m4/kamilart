@@ -248,6 +248,9 @@ const GalleryUI = {
 
 const Gallery = {
     currentFilter: 'all',
+    currentArtworks: [],
+    currentPage: 1,
+    pageSize: 6,
 
     /**
      * Initializes the gallery
@@ -256,12 +259,11 @@ const Gallery = {
         try {
             await MaterialTypeData.init();
             this.renderFilterTabs();
+            this.attachFilterListeners();
+            this.attachLoadMoreListener();
             
             // Render initial gallery
             await this.applyFilter('all');
-
-            // Attach filter button listeners
-            this.attachFilterListeners();
         } catch (error) {
             console.error('Error initializing gallery:', error);
         }
@@ -293,13 +295,68 @@ const Gallery = {
         
         try {
             const artworks = await ArtworkData.getByCategory(category);
-            GalleryUI.renderGallery(artworks);
+            this.currentArtworks = artworks || [];
+            this.currentPage = 1;
+            this.renderCurrentPage();
             
             // Update active button state
             this.updateFilterButtons(category);
         } catch (error) {
             console.error('Error applying filter:', error);
         }
+    },
+
+    /**
+     * Render the current page of artworks and update load-more state
+     */
+    renderCurrentPage() {
+        const visibleCount = this.currentPage * this.pageSize;
+        const visibleArtworks = this.currentArtworks.slice(0, visibleCount);
+
+        GalleryUI.renderGallery(visibleArtworks);
+        this.updateLoadMoreButton();
+    },
+
+    /**
+     * Checks whether there are more artworks to load
+     */
+    hasMoreItems() {
+        return this.currentArtworks.length > this.currentPage * this.pageSize;
+    },
+
+    /**
+     * Updates the load more button visibility and text
+     */
+    updateLoadMoreButton() {
+        const loadMoreButton = document.getElementById('loadMoreButton');
+        if (!loadMoreButton) return;
+
+        if (this.hasMoreItems()) {
+            const remaining = this.currentArtworks.length - this.currentPage * this.pageSize;
+            loadMoreButton.textContent = `Load more (${Math.min(this.pageSize, remaining)})`;
+            loadMoreButton.classList.remove('hidden');
+        } else {
+            loadMoreButton.classList.add('hidden');
+        }
+    },
+
+    /**
+     * Loads the next page of artworks
+     */
+    loadMore() {
+        if (!this.hasMoreItems()) return;
+        this.currentPage += 1;
+        this.renderCurrentPage();
+    },
+
+    /**
+     * Attaches click listener to the load-more button
+     */
+    attachLoadMoreListener() {
+        const loadMoreButton = document.getElementById('loadMoreButton');
+        if (!loadMoreButton) return;
+
+        loadMoreButton.addEventListener('click', () => this.loadMore());
     },
 
     /**
