@@ -576,6 +576,16 @@ button {
     box-shadow: 0 4px 20px rgba(199, 156, 125, 0.3);
 }
 
+.gallery-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-lg);
+}
+
+.load-more-btn {
+    min-width: 220px;
+}
+
 /* Gallery Grid */
 .gallery-grid {
     display: grid;
