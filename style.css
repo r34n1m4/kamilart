@@ -711,22 +711,24 @@ button {
 .lightbox-content {
     position: relative;
     width: min(96vw, 900px);
-    max-height: 95vh;
+    max-height: calc(100vh - 2rem);
     display: flex;
     flex-direction: column;
     align-items: center;
     box-sizing: border-box;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     border-radius: 28px;
-    background: rgba(18, 14, 11, 0.96);
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
+    background: var(--primary-light);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.12);
     animation: zoomIn 0.3s ease-out;
+    overflow: hidden;
 }
 
 @keyframes zoomIn {
     from {
         opacity: 0;
-        transform: scale(0.9);
+        transform: scale(0.96);
     }
     to {
         opacity: 1;
@@ -738,14 +740,15 @@ button {
     width: 100%;
     flex: 1 1 auto;
     min-height: 240px;
-    max-height: calc(95vh - 260px);
+    max-height: calc(100vh - 340px);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: var(--spacing-lg);
     padding: var(--spacing-sm);
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.04);
+    background: #ffffff;
+    border: 1px solid rgba(221, 209, 197, 0.85);
     overflow: hidden;
 }
 
@@ -758,6 +761,24 @@ button {
     object-fit: contain;
     animation: fadeIn 0.3s ease-out;
     margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .lightbox-content {
+        width: min(96vw, 760px);
+        max-height: calc(100vh - 1rem);
+        padding: var(--spacing-sm);
+    }
+
+    .lightbox-image-container {
+        max-height: calc(100vh - 300px);
+        padding: var(--spacing-xs);
+        min-height: 200px;
+    }
+
+    .lightbox-info {
+        padding: 0 var(--spacing-xs);
+    }
 }
 
 /* Lightbox Navigation */
