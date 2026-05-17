@@ -364,7 +364,7 @@ const Gallery = {
      * @param {string} category - Active category
      */
     updateFilterButtons(category) {
-        document.querySelectorAll('.filter-btn').forEach(btn => {
+        document.querySelectorAll('.filter-container .filter-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === category);
         });
     },
@@ -373,7 +373,7 @@ const Gallery = {
      * Attaches click listeners to filter buttons
      */
     attachFilterListeners() {
-        document.querySelectorAll('.filter-btn').forEach(btn => {
+        document.querySelectorAll('.filter-container .filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const category = btn.dataset.filter;
                 this.applyFilter(category);
